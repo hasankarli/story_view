@@ -24,13 +24,13 @@ class ImageLoader {
   /// Load image from disk cache first, if not found then load from network.
   /// `onComplete` is called when [imageBytes] become available.
   void loadImage(VoidCallback onComplete) {
-    if (this.frames != null) {
-      this.state = LoadState.success;
+    if (frames != null) {
+      state = LoadState.success;
       onComplete();
     }
 
     final fileStream = DefaultCacheManager()
-        .getFileStream(this.url, headers: this.requestHeaders as Map<String, String>?);
+        .getFileStream(url, headers: requestHeaders as Map<String, String>?);
 
     fileStream.listen(
       (fileResponse) {
@@ -38,25 +38,25 @@ class ImageLoader {
         // the reason for this is that, when the cache manager fetches
         // the image again from network, the provided `onComplete` should
         // not be called again
-        if (this.frames != null) {
+        if (frames != null) {
           return;
         }
 
         final imageBytes = fileResponse.file.readAsBytesSync();
 
-        this.state = LoadState.success;
+        state = LoadState.success;
 
         PaintingBinding.instance!.instantiateImageCodec(imageBytes).then(
             (codec) {
-          this.frames = codec;
+          frames = codec;
           onComplete();
         }, onError: (error) {
-          this.state = LoadState.failure;
+          state = LoadState.failure;
           onComplete();
         });
       },
       onError: (error) {
-        this.state = LoadState.failure;
+        state = LoadState.failure;
         onComplete();
       },
     );
@@ -114,7 +114,7 @@ class StoryImageState extends State<StoryImage> {
     super.initState();
 
     if (widget.controller != null) {
-      this._streamSubscription =
+      _streamSubscription =
           widget.controller!.playbackNotifier.listen((playbackState) {
         // for the case of gifs we need to pause/play
         if (widget.imageLoader.frames == null) {
@@ -122,7 +122,7 @@ class StoryImageState extends State<StoryImage> {
         }
 
         if (playbackState == PlaybackState.pause) {
-          this._timer?.cancel();
+          _timer?.cancel();
         } else {
           forward();
         }
@@ -160,36 +160,40 @@ class StoryImageState extends State<StoryImage> {
   }
 
   void forward() async {
-    this._timer?.cancel();
+    _timer?.cancel();
 
     if (widget.controller != null &&
-        widget.controller!.playbackNotifier.valueWrapper!.value ==
-            PlaybackState.pause) {
+        widget.controller!.playbackNotifier.value == PlaybackState.pause) {
       return;
     }
 
     final nextFrame = await widget.imageLoader.frames!.getNextFrame();
 
-    this.currentFrame = nextFrame.image;
+    currentFrame = nextFrame.image;
 
     if (nextFrame.duration > Duration(milliseconds: 0)) {
-      this._timer = Timer(nextFrame.duration, forward);
+      _timer = Timer(nextFrame.duration, forward);
     }
 
     setState(() {});
   }
 
   Widget getContentView() {
+    final size = MediaQuery.of(context).size;
     switch (widget.imageLoader.state) {
       case LoadState.success:
-        return RawImage(
-          image: this.currentFrame,
-          fit: widget.fit,
+        return Container(
+          height: size.height,
+          width: size.width,
+          child: RawImage(
+            image: currentFrame,
+            fit: widget.fit,
+          ),
         );
       case LoadState.failure:
         return Center(
             child: Text(
-          "Image failed to load.",
+          'Image failed to load.',
           style: TextStyle(
             color: Colors.white,
           ),
@@ -210,10 +214,6 @@ class StoryImageState extends State<StoryImage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      child: getContentView(),
-    );
+    return Scaffold(backgroundColor: Colors.black, body: getContentView());
   }
 }

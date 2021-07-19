@@ -111,10 +111,12 @@ class StoryVideoState extends State<StoryVideo> {
       return Scaffold(
         backgroundColor: Colors.black,
         body: Container(
-          height: size.height,
-          width: size.width,
-          child: VideoPlayer(playerController!),
-        ),
+            height: size.height,
+            width: size.width,
+            child: AspectRatio(
+              aspectRatio: playerController!.value.aspectRatio,
+              child: VideoPlayer(playerController!),
+            )),
       );
     }
 
